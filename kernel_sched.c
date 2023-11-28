@@ -13,7 +13,7 @@
 
 
 /********************************************
-	
+
 	Core table and CCB-related declarations.
 
  *********************************************/
@@ -22,14 +22,14 @@
 CCB cctx[MAX_CORES];
 
 
-/* 
-	The current core's CCB. This must only be used in a 
-	non-preemtpive context.
+/*
+	The current core's CCB. This must only be used in a
+	non-preemptive context.
  */
 #define CURCORE (cctx[cpu_core_id])
 
-/* 
-	The current thread. This is a pointer to the TCB of the thread 
+/*
+	The current thread. This is a pointer to the TCB of the thread
 	currently executing on this core.
 
 	This must only be used in non-preemptive context.
@@ -159,6 +159,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->owner_pcb = pcb;
 
 	/* Initialize the other attributes */
+	tcb->priority = NORMAL_PRIORITY;
 	tcb->type = NORMAL_THREAD;
 	tcb->state = INIT;
 	tcb->phase = CTX_CLEAN;
@@ -224,10 +225,9 @@ void release_TCB(TCB* tcb)
 
   Both of these structures are protected by @c sched_spinlock.
 */
-
-rlnode SCHED; /* The scheduler queue */
+rlnode SCHED[PRIORITY_QUEUES]; /* The scheduler queue */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
-Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
+Mutex sched_spinlock = MUTEX_INIT; /* Spinlock for scheduler queue */
 
 /* Interrupt handler for ALARM */
 void yield_handler() { yield(SCHED_QUANTUM); }
@@ -268,9 +268,9 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+    rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
-	/* Restart possibly halted cores */
+    /* Restart possibly halted cores */
 	cpu_core_restart_one();
 }
 
@@ -326,17 +326,21 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+    /* Get the highest priority head of the SCHED lists */
+    rlnode *sel = NULL;
+    for (int i = MAX_PRIORITY; i >= 0 && sel == NULL; i--)
+        if (!is_rlist_empty(&SCHED[i]))
+            sel = rlist_pop_front(&SCHED[i]);
 
-	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
+    /* When the lists are empty, this is NULL */
+    TCB *next_thread = (sel == NULL) ? NULL : sel->tcb;
 
-	if (next_thread == NULL)
-		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
+    if (next_thread == NULL)
+        next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
-	next_thread->its = QUANTUM;
+    next_thread->its = QUANTUM;
 
-	return next_thread;
+    return next_thread;
 }
 
 /*
@@ -390,7 +394,7 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 	if (mx != NULL)
 		Mutex_Unlock(mx);
 
-	/* Release the schduler spinlock before calling yield() !!! */
+	/* Release the scheduler spinlock before calling yield() !!! */
 	Mutex_Unlock(&sched_spinlock);
 
 	/* call this to schedule someone else */
@@ -402,9 +406,12 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 }
 
 /* This function is the entry point to the scheduler's context switching */
-
 void yield(enum SCHED_CAUSE cause)
 {
+    /* Counter for the number of times yield() is called */
+    static int call_counter = 0;
+    call_counter++; /* Increment the counter */
+
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
 
@@ -415,7 +422,50 @@ void yield(enum SCHED_CAUSE cause)
 
 	Mutex_Lock(&sched_spinlock);
 
-	/* Update CURTHREAD state */
+    /*
+        Adjust the priority of the current thread, based on the cause of the yield.
+
+        Increase priority when the thread is waiting for I/O, decrease priority
+        when the quantum has expired or when the Mutex_Lock yielded on contention
+        and the end cause of the current time slice is the same as the last one,
+        reset priority in any other case.
+    */
+    if (cause == SCHED_IO)
+    {
+        if (current->priority < MAX_PRIORITY)
+            current->priority++;
+    }
+    else if (cause == SCHED_QUANTUM)
+    {
+        if (current->priority > MIN_PRIORITY)
+            current->priority--;
+    }
+    else if (cause == SCHED_MUTEX)
+    {
+        if (current->priority > MIN_PRIORITY && current->curr_cause == current->last_cause)
+            current->priority--;
+    }
+    else
+        current->priority = NORMAL_PRIORITY;
+
+    /* Boost the priority of all threads every N calls of yield */
+    if (call_counter == N)
+    {
+        call_counter = 0; /* Reset the counter */
+        rlnode *thread;   /* Pointer to the current thread */
+
+        /* Transfer all the threads from the current queue to the next one,
+           starting from the second highest priority queue */
+        for (int i = MAX_PRIORITY - 1; i >= MIN_PRIORITY; i--)
+            while (!is_rlist_empty(&SCHED[i]))
+            {
+                thread = rlist_pop_front(&SCHED[i]);
+                thread->tcb->priority++;
+                rlist_push_back(&SCHED[i + 1], thread);
+            }
+    }
+
+    /* Update CURTHREAD state */
 	if (current->state == RUNNING)
 		current->state = READY;
 
@@ -521,8 +571,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
-	rlnode_init(&TIMEOUT_LIST, NULL);
+    for (int i = 0; i < PRIORITY_QUEUES; i++)
+        rlnode_init(&SCHED[i], NULL);
+    rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
 void run_scheduler()

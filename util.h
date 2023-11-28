@@ -51,8 +51,8 @@ __FILE__, __LINE__, __FUNCTION__, (msg)); abort(); }
 /**
 	@brief Print an error message to stderr and abort.
 
-	This macro will print a readable message (using @c FATAL) 
-	corresponding to a unix error code, usually stored in 
+	This macro will print a readable message (using @c FATAL)
+	corresponding to a unix error code, usually stored in
 	@c errno, or returned from a function.
 
 	@param errcode a unix error code
@@ -63,7 +63,7 @@ __FILE__, __LINE__, __FUNCTION__, (msg)); abort(); }
 /**
 	@brief Wrap a unix call to check for errors.
 
-	This macro can wrap a call whose (integer) return value 
+	This macro can wrap a call whose (integer) return value
 	is 0 for success or an error code for error.
 
 	For example:
@@ -77,7 +77,7 @@ __FILE__, __LINE__, __FUNCTION__, (msg)); abort(); }
 /**
 	@brief Wrap a unix call to check for errors.
 
-	This macro can wrap a call whose (integer) return value 
+	This macro can wrap a call whose (integer) return value
 	is 0 for success or -1 for failure, with an error code stored
 	in errno.
 
@@ -86,13 +86,13 @@ __FILE__, __LINE__, __FUNCTION__, (msg)); abort(); }
 	CHECK(gettimeofday(t, NULL));
 	@endcode
 	@see CHECK
-*/	
+*/
 #define CHECK(cmd)  { if((cmd)==-1) FATALERR(errno); }
 
 /**
 	@brief Check a condition and abort if it fails.
 
-	This macro will check a boolean condition and 
+	This macro will check a boolean condition and
 	abort with a message if it does not hold. It is used to
 	check parameters of functions.
 
@@ -136,7 +136,7 @@ static inline void * xmalloc (size_t size)
 	--------
 
 	This data structure is a doubly-linked circular list, whose implementation
-	is based on the splicing operation. 
+	is based on the splicing operation.
 
 	In a circular list, the nodes form a ring. For example if a, b, and c
 	are nodes, a ring may look like
@@ -154,10 +154,10 @@ static inline void * xmalloc (size_t size)
 	The splicing operation between two rlnodes a and b means simply to
 	swap their @c next pointers (also adjusting the 'prev' pointers appropriately).
 	Splicing two nodes on different rings, joins the two rings. Splicing two
-	nodes on the same ring, splits the ring. 
+	nodes on the same ring, splits the ring.
 	For example, @c splice(a,c) on ring
-	[a,b,c,d] would create two rings [a,d] and [b,c]. 
-	A splice can be reversed by repeating it; continuing the previous example, 
+	[a,b,c,d] would create two rings [a,d] and [b,c].
+	A splice can be reversed by repeating it; continuing the previous example,
 	given rings [a,d] and [b,c], splice(a,c) will create ring [a,b,c,d] again.
 	The precise definition of splice
 	is the following:
@@ -174,8 +174,8 @@ static inline void * xmalloc (size_t size)
 	[a, x..., b, y...]     ==>   [a, y...]  [b, x...]
 	@endverbatim
 
-	To implement lists, an rlnode object is used 
-	as _sentinel_,  that is, it holds no data and is not properly part of the 
+	To implement lists, an rlnode object is used
+	as _sentinel_,  that is, it holds no data and is not properly part of the
 	list. If L is the list node, then ring  [C, L, A, B]  represents the list {A,B,C}.
 	The empty list is represented as [L].
 
@@ -190,7 +190,7 @@ static inline void * xmalloc (size_t size)
 	push_front(L, N)      ::  splice(L, N)
 	push_back(L, N)       ::  splice(L->prev, N)
 	pop_front(L)          ::  return splice(L, L->next)
-	pop_back(L)           ::  return splice(L, L->prev) 
+	pop_back(L)           ::  return splice(L, L->prev)
 	remove(N)             ::  return splice(N->prev, N)
 	insert_after(P, N)    ::  splice(P, N)
 	insert_before(P, N)   ::  splice(P->prev, N)
@@ -218,8 +218,8 @@ static inline void * xmalloc (size_t size)
 
 	rlnode n1, n2;
 
-	// The following four lines are equivalent 
-	rlnode_init(& n1, mytcb); 
+	// The following four lines are equivalent
+	rlnode_init(& n1, mytcb);
 	rlnode_new(& n1)->tcb = mytcb;
 	rlnode_init(& n1, NULL);  n1->tcb = mytcb;
 	rlnode_new(& n1);  n1->tcb = mytcb;
@@ -234,12 +234,12 @@ static inline void * xmalloc (size_t size)
 
 	A list is defined by a sentinel node. For example,
 	@code
-	rlnode mylist;  
+	rlnode mylist;
 	rlnode_new(&mylist);
 	@endcode
-	Note that, although we did not store a value into the sentinel node, we actually 
+	Note that, although we did not store a value into the sentinel node, we actually
 	could do so if desired.
-	
+
 	Once a list is created, it needs to be filled with data.
 	There are routines for adding nodes to the head and tail of a list, or in an intermediate
 	location. Also, lists can be compared for equality, have their length taken, checked for
@@ -284,11 +284,12 @@ static inline void * xmalloc (size_t size)
  */
 
 
-typedef struct process_control_block PCB;	/**< @brief Forward declaration */
-typedef struct thread_control_block TCB;	/**< @brief Forward declaration */
-typedef struct core_control_block CCB;		/**< @brief Forward declaration */
-typedef struct device_control_block DCB;	/**< @brief Forward declaration */
-typedef struct file_control_block FCB;		/**< @brief Forward declaration */
+typedef struct process_control_block PCB;         /**< @brief Forward declaration */
+typedef struct thread_control_block TCB;          /**< @brief Forward declaration */
+typedef struct core_control_block CCB;            /**< @brief Forward declaration */
+typedef struct device_control_block DCB;          /**< @brief Forward declaration */
+typedef struct file_control_block FCB;            /**< @brief Forward declaration */
+typedef struct process_thread_control_block PTCB; /**< @brief Forward declaration */
 
 /** @brief A convenience typedef */
 typedef struct resource_list_node * rlnode_ptr;
@@ -297,21 +298,22 @@ typedef struct resource_list_node * rlnode_ptr;
 	@brief List node
 */
 typedef struct resource_list_node {
-  
+
   /** @brief The list node's key.
-     
-     The key (data element) of a list node is 
+
+     The key (data element) of a list node is
      stored in a union of several pointer and integer types.
-     This allows for easy access, without the need for casting. 
+     This allows for easy access, without the need for casting.
      For example,
      \code
      TCB* tcb = mynode->tcb;
      \endcode
      */
   union {
-    PCB* pcb; 
+    PCB* pcb;
     TCB* tcb;
-    CCB* ccb;
+	PTCB* ptcb;
+	CCB* ccb;
     DCB* dcb;
     FCB* fcb;
     void* obj;
@@ -329,7 +331,7 @@ typedef struct resource_list_node {
 /**
 	@brief Initialize a node as a singleton ring.
 
-	This function will initialize the pointers of a node 
+	This function will initialize the pointers of a node
 	to form a singleton ring. The node is returned, so that
 	one can write code such as
 	\code
@@ -339,16 +341,16 @@ typedef struct resource_list_node {
 	@param p the node to initialize into a singleton
 	@returns the node itself
  */
-static inline rlnode* rlnode_new(rlnode* p) 
-{ 
-	p->prev = p->next = p; 
+static inline rlnode* rlnode_new(rlnode* p)
+{
+	p->prev = p->next = p;
 	return p;
 }
 
 /**
 	@brief Initialize a node as a singleton ring.
 
-	This function will initialize the pointers of a node 
+	This function will initialize the pointers of a node
 	to form a singleton ring, and store the . The node is returned, so that
 	one can write code such as
 	\code
@@ -360,20 +362,20 @@ static inline rlnode* rlnode_new(rlnode* p)
 	@param ptr the pointer to store as the node key
 	@returns the node itself
  */
-static inline rlnode* rlnode_init(rlnode* p, void* ptr)  
+static inline rlnode* rlnode_init(rlnode* p, void* ptr)
 {
-	rlnode_new(p)->obj = ptr; 
+	rlnode_new(p)->obj = ptr;
 	return p;
 }
 
 
-/** 
+/**
 	@brief Swap two pointers to rlnode.
 */
-static inline void rlnode_swap(rlnode_ptr *p, rlnode_ptr *q) 
+static inline void rlnode_swap(rlnode_ptr *p, rlnode_ptr *q)
 {
   rlnode *temp;
-  temp = *p;  *p = *q; *q = temp;  
+  temp = *p;  *p = *q; *q = temp;
 }
 
 /**
@@ -413,29 +415,29 @@ static inline int is_rlist_empty(rlnode* a) { return a==a->next; }
 /**
 	@brief Insert at the head of a list.
 
-	Assuming that @c node is not in the ring of @c list, 
-	this function inserts the ring  of @c node (often a singleton) 
+	Assuming that @c node is not in the ring of @c list,
+	this function inserts the ring  of @c node (often a singleton)
 	at the head of @c list.
 
-	This function is equivalent to @c splice(list,node). 
+	This function is equivalent to @c splice(list,node).
   */
 static inline void rlist_push_front(rlnode* list, rlnode* node) { rl_splice(list, node); }
 
 /**
 	@brief Insert at the tail of a list.
 
-	Assuming that @c node is not in the ring of @c list, 
-	this function inserts the ring  of @c node (often a singleton) 
+	Assuming that @c node is not in the ring of @c list,
+	this function inserts the ring  of @c node (often a singleton)
 	at the tail of @c list.
 
-	This function is equivalent to @c splice(list->prev,node). 
+	This function is equivalent to @c splice(list->prev,node).
   */
 static inline void rlist_push_back(rlnode* list, rlnode* node) { rl_splice(list->prev, node); }
 
 /**
 	@brief Remove and return the head of the list.
 
-	This function, applied on a non-empty list, will remove the head of 
+	This function, applied on a non-empty list, will remove the head of
 	the list and return in.
 
 	When it is applied to an empty list, the function will return the
@@ -446,7 +448,7 @@ static inline rlnode* rlist_pop_front(rlnode* list) { return rl_splice(list, lis
 /**
 	@brief Remove and return the tail of the list.
 
-	This function, applied on a non-empty list, will remove the tail of 
+	This function, applied on a non-empty list, will remove the tail of
 	the list and return in.
 */
 static inline rlnode* rlist_pop_back(rlnode* list) { return rl_splice(list, list->prev); }
@@ -455,9 +457,9 @@ static inline rlnode* rlist_pop_back(rlnode* list) { return rl_splice(list, list
 	@brief Return the length of a list.
 
 	This function returns the length of a list.
-	@note the cost of this operation is @f$ O(n) @f$  
+	@note the cost of this operation is @f$ O(n) @f$
 */
-static inline size_t rlist_len(rlnode* list) 
+static inline size_t rlist_len(rlnode* list)
 {
 	unsigned int count = 0;
 	rlnode* p = list->next;
@@ -473,7 +475,7 @@ static inline size_t rlist_len(rlnode* list)
 
 	@param L1 the first list
 	@param L2 the second list
-	@returns true iff two lists are equal, else false. 
+	@returns true iff two lists are equal, else false.
  */
 static inline int rlist_equal(rlnode* L1, rlnode* L2)
 {
@@ -483,7 +485,7 @@ static inline int rlist_equal(rlnode* L1, rlnode* L2)
 	while(i1!=L1) {
 		if(i2==L2 || i1->num != i2->num)
 			return 0;
-		i1 = i1->next; 
+		i1 = i1->next;
 		i2 = i2->next;
 	}
 
@@ -521,7 +523,7 @@ static inline void rlist_prepend(rlnode* ldest, rlnode* lsrc)
 /**
 	@brief Reverse a ring or list.
 
-	This function will reverse the direction of a ring. 
+	This function will reverse the direction of a ring.
   */
 static inline void rlist_reverse(rlnode* l)
 {
@@ -556,7 +558,7 @@ static inline rlnode* rlist_find(rlnode* List, void* key, rlnode* fail)
 }
 
 /**
-	@brief Move nodes 
+	@brief Move nodes
 
 	Append all nodes of Lsrc which satisfy pred (that is, pred(...) returns non-zero)
 	to the end of Ldest.
@@ -597,7 +599,7 @@ static inline size_t argvlen(size_t argc, const char** argv)
 	size_t l=0;
 	for(size_t i=0; i<argc; i++) {
 		l+= strlen(argv[i])+1;
-	}	
+	}
 	return l;
 }
 
@@ -642,7 +644,7 @@ static inline size_t argscount(int argl, void* args)
 
 	for(int i=0; i<argl; i++)
 		if(a[i]=='\0') n++;
-	return n;	
+	return n;
 }
 
 /**
