@@ -423,23 +423,23 @@ void yield(enum SCHED_CAUSE cause)
 	Mutex_Lock(&sched_spinlock);
 
     /* Adjust the priority of the current thread, based on the cause of the yield */
-    if (cause == SCHED_IO)
-    { /* Increase priority when the thread is waiting for I/O */
+    switch (cause)
+    {
+    case SCHED_IO: /* Increase priority for interactive threads */
         if (current->priority < MAX_PRIORITY)
             current->priority++;
-    }
-    else if (cause == SCHED_QUANTUM)
-    { /* Decrease priority when the quantum has expired */
+        break;
+    case SCHED_MUTEX: /* Decrease priority on mutex contention if the end cause is the same as the last one */
+        if (current->curr_cause != current->last_cause)
+            break;
+    case SCHED_QUANTUM: /* Decrease priority when the quantum has expired */
         if (current->priority > MIN_PRIORITY)
             current->priority--;
-    }
-    else if (cause == SCHED_MUTEX)
-    { /* Decrease priority when the Mutex_Lock yielded on contention and the end cause is the same as the last one */
-        if (current->priority > MIN_PRIORITY && current->curr_cause == current->last_cause)
-            current->priority--;
-    }
-    else /* Otherwise, reset the priority */
+        break;
+    default: /* Reset priority in any other case */
         current->priority = NORMAL_PRIORITY;
+        break;
+    }
 
     /* Boost the priority of all threads every N calls of yield */
     if (call_counter == N)
