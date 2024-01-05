@@ -4,18 +4,18 @@
 #include "kernel_sched.h"
 
 /*
-    The reader file operations. It only implements read and close.
+    The reader file operations.
 */
-static file_ops reader_file_ops = {
+file_ops reader_file_ops = {
     .Open = NULL,
     .Read = pipe_read,
     .Write = NULL,
     .Close = pipe_reader_close};
 
 /*
-    The writer file operations. It only implements write and close.
+    The writer file operations.
 */
-static file_ops writer_file_ops = {
+file_ops writer_file_ops = {
     .Open = NULL,
     .Read = NULL,
     .Write = pipe_write,
@@ -29,10 +29,9 @@ int sys_Pipe(pipe_t *pipe)
     /* Create 2 FCBs and corresponding Fids */
     FCB *fcb[2];
     Fid_t fid[2];
-    int retval = FCB_reserve(2, fid, fcb); /* Acquire the FCBs and Fids */
 
-    /* Check if we got the FCBs and Fids successfully */
-    if (retval == 0)
+    /* Try to acquire the FCBs and Fids and check if we succeeded */
+    if (FCB_reserve(2, fid, fcb) == 0)
         return -1; /* Return -1 to indicate error */
 
     /* Initialize the pipe */

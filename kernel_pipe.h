@@ -34,8 +34,6 @@ typedef struct pipe_control_block
     char BUFFER[PIPE_BUFFER_SIZE]; /**< @brief Bounded (cyclic) byte buffer */
 } pipe_cb;
 
-// int sys_Pipe(pipe_t *pipe);
-
 /**
     @brief Pipe write operation.
 
