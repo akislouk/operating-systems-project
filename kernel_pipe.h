@@ -44,6 +44,7 @@ typedef struct pipe_control_block
     or -1 on error.
 
     Possible errors are:
+    - The reader or writer is closed.
     - There was a I/O runtime problem.
 
     @param pipecb_t The pipe control block.
@@ -63,6 +64,7 @@ int pipe_write(void *pipecb_t, const char *buf, unsigned int n);
     but at least 1. A value of 0 indicates "end of data".
 
     Possible errors are:
+    - The reader is closed.
     - There was a I/O runtime problem.
 
     @param pipecb_t The pipe control block.
@@ -81,6 +83,7 @@ int pipe_read(void *pipecb_t, char *buf, unsigned int n);
     the stream should still be destroyed.
 
     Possible errors are:
+    - The writer is already closed.
     - There was a I/O runtime problem.
 
     @param _pipecb The pipe control block.
@@ -97,6 +100,7 @@ int pipe_writer_close(void *_pipecb);
     the stream should still be destroyed.
 
     Possible errors are:
+    - The reader is already closed.
     - There was a I/O runtime problem.
 
     @param _pipecb The pipe control block.
