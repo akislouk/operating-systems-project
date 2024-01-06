@@ -21,6 +21,133 @@ void SCB_decref(socket_cb *socket)
     return;
 }
 
+/**
+    @brief Socket write operation.
+
+    A wrapper around the pipe_write function that validates the socket
+    before calling the pipe_write function.
+
+    Write up to 'n' bytes from 'buf' to the stream 'sock_cb'.
+    If it is not possible to write any data (e.g., a buffer is full),
+    the thread will block.
+    The write function should return the number of bytes copied from buf,
+    or -1 on error.
+
+    Possible errors are:
+    - The socket is not a peer socket.
+    - The socket doesn't have an open write pipe.
+    - There was a I/O runtime problem.
+
+    @param sock_cb The socket control block.
+    @param buf The buffer to write from.
+    @param n The number of bytes to write.
+    @return The number of bytes written on success or -1 on error.
+*/
+int socket_write(void *sock_cb, const char *buf, unsigned int n)
+{
+    /* Get the socket */
+    socket_cb *socket = (socket_cb *)sock_cb;
+
+    /* Check if the socket is valid and a peer */
+    if (socket == NULL || socket->type != SOCKET_PEER)
+        return -1; /* Return -1 to indicate error */
+
+    /* Check if the socket has an open write pipe */
+    if (socket->peer_s.write_pipe == NULL)
+        return -1; /* Return -1 to indicate error */
+
+    /* Get the write pipe and write to it */
+    pipe_cb *pipe = socket->peer_s.write_pipe;
+    return pipe_write(pipe, buf, n); /* Returns the number of bytes written or -1 on error */
+}
+
+/**
+    @brief Socket read operation.
+
+    A wrapper around the pipe_read function that validates the socket
+    before calling the pipe_read function.
+
+    Read up to 'n' bytes from stream 'sock_cb' into buffer 'buf'.
+    If no data is available, the thread will block, to wait for data.
+    The Read function should return the number of bytes copied into buf,
+    or -1 on error. The call may return fewer bytes than 'n',
+    but at least 1. A value of 0 indicates "end of data".
+
+    Possible errors are:
+    - The socket is not a peer socket.
+    - The socket doesn't have an open read pipe.
+    - There was a I/O runtime problem.
+
+    @param sock_cb The Socket control block.
+    @param buf The buffer to read into.
+    @param n The number of bytes to read.
+    @return The number of bytes read on success or -1 on error.
+*/
+int socket_read(void *sock_cb, char *buf, unsigned int n)
+{
+    /* Get the socket */
+    socket_cb *socket = (socket_cb *)sock_cb;
+
+    /* Check if the socket is valid and a peer */
+    if (socket == NULL || socket->type != SOCKET_PEER)
+        return -1; /* Return -1 to indicate error */
+
+    /* Check if the socket has an open read pipe */
+    if (socket->peer_s.read_pipe == NULL)
+        return -1; /* Return -1 to indicate error */
+
+    /* Get the read pipe and read from it */
+    pipe_cb *pipe = socket->peer_s.read_pipe;
+    return pipe_read(pipe, buf, n); /* Returns the number of bytes read or -1 on error */
+}
+
+/**
+    @brief Socket close operation.
+
+    Close the stream object, deallocating any resources held by it.
+    This function returns 0 is it was successful and -1 if not.
+    Although the value in case of failure is passed to the calling process,
+    the stream should still be destroyed.
+
+    Possible errors are:
+    - The socket is not valid.
+    - There was a I/O runtime problem.
+
+    @param sock_cb The socket control block.
+    @return 0 on success or -1 on error.
+*/
+int socket_close(void *sock_cb)
+{
+    /* Get the socket */
+    socket_cb *socket = (socket_cb *)sock_cb;
+
+    /* Check if the socket is valid */
+    if (socket == NULL)
+        return -1; /* Return -1 to indicate error */
+
+    /* Check if the socket is a peer or a listener */
+    if (socket->type == SOCKET_PEER)
+    { /* If it is a peer, close both its pipes */
+        pipe_reader_close(socket->peer_s.read_pipe);
+        pipe_writer_close(socket->peer_s.write_pipe);
+        socket->peer_s.read_pipe = NULL;
+        socket->peer_s.write_pipe = NULL;
+    }
+    else if (socket->type == SOCKET_LISTENER)
+    { /* If it is a listener, empty its queue, unbind it and signal the waiters */
+        while (!is_rlist_empty(&socket->listener_s.queue))
+            free(rlist_pop_back(&socket->listener_s.queue));
+        PORT_MAP[socket->port] = NULL;
+        kernel_broadcast(&socket->listener_s.req_available);
+    }
+
+    /* Decrement the reference counter */
+    SCB_decref(socket);
+
+    /* Return 0 to indicate success */
+    return 0;
+}
+
 /*
     The socket file operations.
 */
@@ -273,74 +400,6 @@ int sys_ShutDown(Fid_t sock, shutdown_mode mode)
         socket->peer_s.write_pipe = NULL;
         break;
     }
-
-    /* Return 0 to indicate success */
-    return 0;
-}
-
-int socket_write(void *sock_cb, const char *buf, unsigned int n)
-{
-    /* Get the socket */
-    socket_cb *socket = (socket_cb *)sock_cb;
-
-    /* Check if the socket is valid and a peer */
-    if (socket == NULL || socket->type != SOCKET_PEER)
-        return -1; /* Return -1 to indicate error */
-
-    /* Check if the socket has an open write pipe */
-    if (socket->peer_s.write_pipe == NULL)
-        return -1; /* Return -1 to indicate error */
-
-    /* Get the write pipe and write to it */
-    pipe_cb *pipe = socket->peer_s.write_pipe;
-    return pipe_write(pipe, buf, n); /* Returns the number of bytes written or -1 on error */
-}
-
-int socket_read(void *sock_cb, char *buf, unsigned int n)
-{
-    /* Get the socket */
-    socket_cb *socket = (socket_cb *)sock_cb;
-
-    /* Check if the socket is valid and a peer */
-    if (socket == NULL || socket->type != SOCKET_PEER)
-        return -1; /* Return -1 to indicate error */
-
-    /* Check if the socket has an open read pipe */
-    if (socket->peer_s.read_pipe == NULL)
-        return -1; /* Return -1 to indicate error */
-
-    /* Get the read pipe and read from it */
-    pipe_cb *pipe = socket->peer_s.read_pipe;
-    return pipe_read(pipe, buf, n); /* Returns the number of bytes read or -1 on error */
-}
-
-int socket_close(void *sock_cb)
-{
-    /* Get the socket */
-    socket_cb *socket = (socket_cb *)sock_cb;
-
-    /* Check if the socket is valid */
-    if (socket == NULL)
-        return -1; /* Return -1 to indicate error */
-
-    /* Check if the socket is a peer or a listener */
-    if (socket->type == SOCKET_PEER)
-    { /* If it is a peer, close both its pipes */
-        pipe_reader_close(socket->peer_s.read_pipe);
-        pipe_writer_close(socket->peer_s.write_pipe);
-        socket->peer_s.read_pipe = NULL;
-        socket->peer_s.write_pipe = NULL;
-    }
-    else if (socket->type == SOCKET_LISTENER)
-    { /* If it is a listener, empty its queue, unbind it and signal the waiters */
-        while (!is_rlist_empty(&socket->listener_s.queue))
-            free(rlist_pop_back(&socket->listener_s.queue));
-        PORT_MAP[socket->port] = NULL;
-        kernel_broadcast(&socket->listener_s.req_available);
-    }
-
-    /* Decrement the reference counter */
-    SCB_decref(socket);
 
     /* Return 0 to indicate success */
     return 0;
