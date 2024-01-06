@@ -27,7 +27,7 @@ void SCB_decref(socket_cb *socket)
     A wrapper around the pipe_write function that validates the socket
     before calling the pipe_write function.
 
-    Write up to 'n' bytes from 'buf' to the stream 'sock_cb'.
+    Write up to 'size' bytes from 'buf' to the stream 'sock_cb'.
     If it is not possible to write any data (e.g., a buffer is full),
     the thread will block.
     The write function should return the number of bytes copied from buf,
@@ -40,10 +40,10 @@ void SCB_decref(socket_cb *socket)
 
     @param sock_cb The socket control block.
     @param buf The buffer to write from.
-    @param n The number of bytes to write.
+    @param size The number of bytes to write.
     @return The number of bytes written on success or -1 on error.
 */
-int socket_write(void *sock_cb, const char *buf, unsigned int n)
+int socket_write(void *sock_cb, const char *buf, unsigned int size)
 {
     /* Get the socket */
     socket_cb *socket = (socket_cb *)sock_cb;
@@ -58,7 +58,7 @@ int socket_write(void *sock_cb, const char *buf, unsigned int n)
 
     /* Get the write pipe and write to it */
     pipe_cb *pipe = socket->peer_s.write_pipe;
-    return pipe_write(pipe, buf, n); /* Returns the number of bytes written or -1 on error */
+    return pipe_write(pipe, buf, size); /* Returns the number of bytes written or -1 on error */
 }
 
 /**
@@ -67,10 +67,10 @@ int socket_write(void *sock_cb, const char *buf, unsigned int n)
     A wrapper around the pipe_read function that validates the socket
     before calling the pipe_read function.
 
-    Read up to 'n' bytes from stream 'sock_cb' into buffer 'buf'.
+    Read up to 'size' bytes from stream 'sock_cb' into buffer 'buf'.
     If no data is available, the thread will block, to wait for data.
     The Read function should return the number of bytes copied into buf,
-    or -1 on error. The call may return fewer bytes than 'n',
+    or -1 on error. The call may return fewer bytes than 'size',
     but at least 1. A value of 0 indicates "end of data".
 
     Possible errors are:
@@ -80,10 +80,10 @@ int socket_write(void *sock_cb, const char *buf, unsigned int n)
 
     @param sock_cb The Socket control block.
     @param buf The buffer to read into.
-    @param n The number of bytes to read.
+    @param size The number of bytes to read.
     @return The number of bytes read on success or -1 on error.
 */
-int socket_read(void *sock_cb, char *buf, unsigned int n)
+int socket_read(void *sock_cb, char *buf, unsigned int size)
 {
     /* Get the socket */
     socket_cb *socket = (socket_cb *)sock_cb;
@@ -98,7 +98,7 @@ int socket_read(void *sock_cb, char *buf, unsigned int n)
 
     /* Get the read pipe and read from it */
     pipe_cb *pipe = socket->peer_s.read_pipe;
-    return pipe_read(pipe, buf, n); /* Returns the number of bytes read or -1 on error */
+    return pipe_read(pipe, buf, size); /* Returns the number of bytes read or -1 on error */
 }
 
 /**
