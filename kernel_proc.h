@@ -64,6 +64,16 @@ typedef struct process_control_block {
   int thread_count;       /**< @brief The number of threads in the process */
 } PCB;
 
+/**
+  @brief Process Information Control Block.
+
+  This structure holds information about a process.
+ */
+typedef struct process_info_control_block
+{
+    procinfo *info; /**< @brief The process information */
+    int pcb_cursor; /**< @brief Process table counter */
+} procinfo_cb;
 
 /**
   @brief Initialize the process table.

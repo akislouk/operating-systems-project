@@ -315,7 +315,100 @@ void sys_Exit(int exitval)
 }
 
 
+/*
+    Information stream read operation.
+*/
+int procinfo_read(void *_procinfo_cb, char *buf, unsigned int size)
+{
+    /* Get the information stream */
+    procinfo_cb *info_cb = (procinfo_cb *)_procinfo_cb;
+
+    /* Check if the stream is valid */
+    if (info_cb == NULL)
+        return -1; /* Return -1 to indicate error */
+
+    /* Check if we reached the end of the process table */
+    if (info_cb->pcb_cursor == MAX_PROC)
+        return 0; /* Return 0 to indicate "end of data" */
+
+    /* Find the first non-free process, starting from the cursor */
+    while (info_cb->pcb_cursor < MAX_PROC - 1 && PT[info_cb->pcb_cursor].pstate == FREE)
+        info_cb->pcb_cursor++;
+
+    /* The PCB of the process we found */
+    PCB pcb = PT[info_cb->pcb_cursor];
+
+    /* Copy the information of the process we found */
+    info_cb->info->pid = get_pid(&pcb);
+    info_cb->info->ppid = get_pid(pcb.parent);
+    info_cb->info->alive = pcb.pstate == ALIVE; /* 1 if alive, 0 if zombie */
+    info_cb->info->thread_count = pcb.thread_count;
+    info_cb->info->main_task = pcb.main_task;
+    info_cb->info->argl = pcb.argl;
+
+    /* Copy the arguments string. If the string is too long,
+       copy only the first PROCINFO_MAX_ARGS_SIZE bytes */
+    memcpy(info_cb->info->args, pcb.args, pcb.argl >= PROCINFO_MAX_ARGS_SIZE ? PROCINFO_MAX_ARGS_SIZE : pcb.argl);
+
+    /* Copy the process' information to the buffer */
+    memcpy(buf, info_cb->info, size);
+
+    /* Increment the cursor */
+    info_cb->pcb_cursor++;
+
+    /* Return the number of bytes copied into buf */
+    return size;
+}
+
+/*
+    Information stream close operation.
+*/
+int procinfo_close(void *_procinfo_cb)
+{
+    /* Get the information stream */
+    procinfo_cb *info_cb = (procinfo_cb *)_procinfo_cb;
+
+    /* Check if the stream is valid */
+    if (info_cb == NULL)
+        return -1; /* Return -1 to indicate error */
+
+    /* Free the stream */
+    free(info_cb->info);
+    free(info_cb);
+
+    /* Return 0 to indicate success */
+    return 0;
+}
+
+/*
+    Information stream file operations.
+*/
+static file_ops procinfo_file_ops = {
+    .Open = NULL,
+    .Read = procinfo_read,
+    .Write = NULL,
+    .Close = procinfo_close};
+
+/**
+    Open a kernel information stream.
+*/
 Fid_t sys_OpenInfo()
 {
-	return NOFILE;
+    /* Create an FCB and corresponding Fid */
+    Fid_t fid;
+    FCB *fcb;
+
+    /* Try to acquire the FCB and Fid and check if we succeeded */
+    if (FCB_reserve(1, &fid, &fcb) == 0)
+        return NOFILE; /* Return NOFILE to indicate error */
+
+    /* Initialize the stream */
+    procinfo_cb *info_cb = (procinfo_cb *)xmalloc(sizeof(procinfo_cb));
+    info_cb->info = (procinfo *)xmalloc(sizeof(procinfo));
+    info_cb->pcb_cursor = 0;
+    fcb->streamobj = info_cb;
+    fcb->streamfunc = &procinfo_file_ops;
+
+    /* Return the Fid */
+    return fid;
 }
