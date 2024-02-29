@@ -34,7 +34,7 @@ void boot_tinyos_kernel()
 {
 
   if(cpu_core_id==0) {
-    /* Initialize the kenrel data structures */
+    /* Initialize the kernel data structures */
     initialize_processes();
     initialize_devices();
     initialize_files();
@@ -54,7 +54,7 @@ void boot_tinyos_kernel()
   run_scheduler();
 
   if(cpu_core_id==0) {
-    /* Here, we could add cleanup after the scheduler has ended. */    
+    /* Here, we could add cleanup after the scheduler has ended. */
   }
 }
 
@@ -67,9 +67,3 @@ void boot(uint ncores, uint nterm, Task boot_task, int argl, void* args)
 
   vm_boot(boot_tinyos_kernel, ncores, nterm);
 }
-
-
-
-
-
-

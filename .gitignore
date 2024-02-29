@@ -4,7 +4,11 @@
 .vscode
 mtask
 terminal
-bios_example*
+bios_example1
+bios_example2
+bios_example3
+bios_example4
+bios_example5
 test_util
 tinyos_shell
 validate_api
